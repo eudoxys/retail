@@ -1,0 +1,131 @@
+<!doctype html>
+    <html>
+    <head>
+        <title>Retail</title>
+        <meta name="expires" content="86400" />
+        <link rel="stylesheet" href="qdox.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    </head>
+    <body>
+
+    <!-- Sidebar -->
+    <div class="w3-sidebar w3-light-grey w3-bar-block" style="width:180px">
+      <center>
+        <img src="https://avatars.githubusercontent.com/u/21315775?v=4" height="128px" width="128px"/>
+        <br/><a href="https://github.com/eudoxys">Eudoxys Sciences LLC</a>
+        <br/><a href="https://github.com/eudoxys"></a>
+      </center>
+      <title class="w3-bar-item">retail</title>
+      <a href="#main" class="w3-bar-item w3-button">Command Line</a>
+      <a href="#python" class="w3-bar-item w3-button">Python Library</a>
+      <a href="#package" class="w3-bar-item w3-button">Package Metadata</a>
+    </div>
+
+    <!-- Page Content -->
+    <div style="margin-left:220px">
+
+    <h1 id="main" class="w3-container">Command Line</h1>
+
+    <p/>
+Retail electricity data
+<p/>Syntax: <code>retail [OPTIONS ...]</code><p/>
+<h2 class="w3-container">Options</h2>
+<p/><ul><li>
+<code>--debug</code>:  enable traceback output of errors</li><li>
+<code>--validate</code>:  perform data validation checks</li><li>
+<code>--year=YEAR</code>:  output data for YEAR only</li><li>
+<code>--month=MONTH</code>:  output data for MONTH only</li><li>
+<code>--state=STATE</code>:  output data for STATE only</li><li>
+<code>--sector=SECTOR</code>:  output data for SECTOR only</li><li>
+<code>--keys[=INDEX]</code>:  output keys for INDEX (default all keys)</li></li>
+</ul>
+
+<h2 class="w3-container">See also</h2>
+<p/>* EIA Electricity Data (<a href="https://www.eia.gov/electricity/data.php" target="_tab">https://www.eia.gov/electricity/data.php</a>)
+<p/>
+<h1 id="python" class="w3-container">Python Library</h1>
+
+<h2 class="w3-container">RetailElectricity</h2><p/>Retail electricity data class
+<p/><p/>    This class is used to select retail electricity supply data. 
+<p/><h3 class="w3-container">Examples</h3>
+<p/><p/>    Create an accessor object
+<p/><pre>from retail import RetailElectricitydata = RetailElectricity()<p/></pre><p/>    To read the data for 2020, use
+<p/><pre>data[2020]<p/></pre><p/>    To read the data for August 2020, use
+<p/><pre>data[(2020,7)]<p/></pre><p/>    To read the data for August 2020 for California, use
+<p/><pre>data[(2020,7,"CA")]<p/></pre><p/>    To read the residential data for August 2020 for California, use
+<p/><pre>data[(2020,7,"CA","RESIDENTIAL")]<p/></pre><p/>    To read the residential price data for August 2020 for California, use
+<p/><pre>data[(2020,7,"CA","RESIDENTIAL","Price")]<p/></pre><p/>    To get the units of <code>Price</code>, use
+<p/><pre>data.units()["Price"]<p/></pre><p/>    To get a list of available sectors, use
+<p/><pre>data.keys(KEY<sub>SECTOR)</sub><p/></pre><p/>    To get a list of available values, use
+<p/><pre>data.key(KEY<sub>VALUE)</sub></pre><p/>    
+
+<h3 class="w3-container"><code><b>RetailElectricity</b>(<b>url</b>:<i>str</i>)</code></h3>
+<p/>Class constructor 
+<p/><h3 class="w3-container">Arguments</h3>
+<p/><ul><li><code>url (str)</code>:  URL from which data is downloaded (default is <code>RetailElectricity.URL</code>)</li>
+</li>
+</ul>
+        
+
+<h3 class="w3-container"><code><b>RetailElectricity.keys</b>(<b>level</b>:<i>int</i>, <b>unique</b>:<i>bool</i>) &rightarrow; <i>set | list</i></code></h3>
+<p/>Get keys used for indexing data
+<p/><h4 class="w3-container">Arguments</h4>
+<p/><ul><li><code>level (int)</code>:  the key level for which the keys are sought (default None)</li>
+<li><code>unique (bool)</code>:  specifies whether to return the distinct values</li>
+</li>
+</ul>
+<h4 class="w3-container">Returns</h4>
+<p/><ul><li><code>set|list</code>:  keys at that level or all keys if level is None</li>
+</li>
+</ul>
+        
+
+<h3 class="w3-container"><code><b>RetailElectricity.units</b>() &rightarrow; <i>dict</i></code></h3>
+<p/>Get units of data
+<p/><h4 class="w3-container">Returns</h4>
+<p/><ul><li><code>dict</code>:  mapping of value keys to units of values</li>
+</li>
+</ul>
+        
+
+<h2 class="w3-container"><code><b>main</b>(<b>argv</b>:<i>list</i>) &rightarrow; <i>int</i></code></h2>
+<p/>Main CLI
+<p/>    Runs the main <code>retail</code> program. 
+<p/><h3 class="w3-container">Arguments</h3>
+<ul><li><code>argv (list[str])</code>:  argument list (default is sys.argv)</li>
+</li>
+</ul>
+<h3 class="w3-container">Returns</h3>
+<ul><li><code>int</code>:  exit code</li>
+</li>
+</ul>
+<h3 class="w3-container">Properties</h3>
+<ul><li><code>DEBUG (bool)</code>:  enable debugging traceback on exception</li>
+</li>
+</ul>
+<h3 class="w3-container">Exceptions</h3>
+<ul><li><code>Exception</code>:  exceptions are only raised if <code>DEBUG</code> is <code>True</code>.</li>
+<li><code>FileNotFoundError</code>:  exception raised when an input file is not found.</li>
+<li><code>RetailError</code>:  exception raised when an invalid command argument is encountered.</li>
+</li>
+</ul>
+    
+<h2 class="w3-container">Python Constants</h2><p/><code>E_ERROR = 1</code><p/><code>E_OK = 0</code><p/><code>KEY_MONTH = 1</code><p/><code>KEY_SECTOR = 3</code><p/><code>KEY_STATE = 2</code><p/><code>KEY_VALUE = 4</code><p/><code>KEY_YEAR = 0</code>
+<h1 id="package" class="w3-container">Package Metadata</h1>
+<p/><table class="w3-container">
+<tr><th><nobr>Name</nobr></th><td>:</td><td>retail</td></tr>
+<tr><th><nobr>Version</nobr></th><td>:</td><td>0.0.0a0</td></tr>
+<tr><th><nobr>Description</nobr></th><td>:</td><td>Retail electricity data</td></tr>
+<tr><th><nobr>Authors</nobr></th><td>:</td><td>David P. Chassin <dpchassin@gmail.com></td></tr>
+<tr><th><nobr>Maintainers</nobr></th><td>:</td><td>David P. Chassin <dpchassin@gmail.com></td></tr>
+<tr><th><nobr>Requires-Python</nobr></th><td>:</td><td>>= 3.10</td></tr>
+<tr><th><nobr>Dependencies</nobr></th><td>:</td><td>pandas<br/>openpyxl</td></tr>
+<tr><th><nobr>Keywords</nobr></th><td>:</td><td>retail<br/>electricity<br/>data</td></tr>
+<tr><th><nobr>License</nobr></th><td>:</td><td>MIT License</td></tr>
+<tr><th><nobr>Classifiers</nobr></th><td>:</td><td>Development Status :: 3 - Alpha<br/>Intended Audience :: Developers<br/>License :: OSI Approved :: MIT License<br/>Programming Language :: Python :: 3 :: Only<br/>Topic :: Software Development :: Libraries</td></tr>
+<tr><th><nobr>Urls</nobr></th><td>:</td><td>Homepage = <a href="https://github.com/eudoxys/retail" target="_tab">https://github.com/eudoxys/retail</a><br/>Documentation = <a href="https://retail.gitub.io/" target="_tab">https://retail.gitub.io/</a><br/>Repository = <a href="https://github.com/eudoxys/retail.git" target="_tab">https://github.com/eudoxys/retail.git</a><br/>Issues = <a href="https://github.com/eudoxys/retail/issues" target="_tab">https://github.com/eudoxys/retail/issues</a></td></tr>
+<tr><th><nobr>Scripts</nobr></th><td>:</td><td><code>retail</code> &rightarrow; <code>main()</code></td></tr>
+</table>
+<hr/><p/><cite>Copyright &copy; 2024 David P. Chassin</body>
+            </html>

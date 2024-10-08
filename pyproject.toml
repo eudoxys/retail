@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools","qdox @ git+https://github.com/eudoxys/qdox"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retail"
+version = "0.0.0a0"
+description = "Retail electricity data"
+authors = [
+    {name = "David P. Chassin <dpchassin@gmail.com>"},
+    ]
+maintainers = [
+    {name = "David P. Chassin <dpchassin@gmail.com>"},
+    ]
+readme = "README.md"
+requires-python = ">= 3.10"
+dependencies = ["pandas","openpyxl"]
+keywords = ["retail","electricity","data"]
+license = {text="MIT License"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries",
+    ]
+
+[project.urls]
+Homepage = "https://github.com/eudoxys/retail"
+Documentation = "https://retail.gitub.io/"
+Repository = "https://github.com/eudoxys/retail.git"
+Issues = "https://github.com/eudoxys/retail/issues"
+
+[project.scripts]
+retail = "retail:main"
