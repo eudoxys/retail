@@ -439,6 +439,14 @@ def _main(argv:list[str]) -> int:
 
         elif key == "--units":
 
+            if len(data.index.names) < 3:
+
+                raise RetailError("--units must be specified first")
+               
+            if main.UNITS:
+
+                raise RetailError("--units have already been specified") 
+                
             if value == "glm":
 
                 lookup = {
@@ -455,7 +463,7 @@ def _main(argv:list[str]) -> int:
                     columns[n] = tuple(values)
                 data.columns = pd.MultiIndex.from_tuples(columns)
                 for column,unit in lookup.items():
-                    data[column] = unit
+                    data.loc[data.index,column] = unit
                 main.INDEX = "pack"
                 main.UNITS = "glm"
 
@@ -487,11 +495,11 @@ def _main(argv:list[str]) -> int:
                     drop.append(":".join(item))
         data.columns = pack
         for item in drop:
-            data.drop(item,axis=1,inplace=True)
+            data = data.drop(item,axis=1)
 
     if main.INDEX == "pack":
         name = ":".join(data.index.names)
-        data[name] = [":".join([str(y) for y in x if x]) for x in data.index]
+        data.loc[name] = [":".join([str(y) for y in x if x]) for x in data.index]
         data.set_index(name,inplace=True)
     elif not main.INDEX:
         data.reset_index(inplace=True)
