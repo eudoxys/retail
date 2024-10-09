@@ -1,6 +1,7 @@
 [build-system]
 requires = ["setuptools","qdox @ git+https://github.com/eudoxys/qdox"]
 build-backend = "setuptools.build_meta"
+install = "qdox -"
 
 [project]
 name = "retail"

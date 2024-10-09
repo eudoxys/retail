@@ -4,19 +4,73 @@ Syntax: retail [OPTIONS ...]
 
 Options:
 
+    * -: run with no options
+
     * --debug: enable traceback output of errors
+
+    * --format={csv}: override output format (see `pandas.DataFrame.to_*`)
+
+    * --group=[KEY:FUNCTION[,...]]: apply aggregate function by group key
+
+    * --header=[pack|unpack|none]: change header output (default 'pack')
+
+    * --index[=pack|unpack|none]: change index output (default 'pack')
+
+    * --keys[=KEY[,...]]: change index from default `Year,Month,State`
+
+    * --output=FILE[,OPTION,...]: output to file (default `stdout`)
+
+    * --precision=INT: change rounding
+
+    * --select=KEY:VALUE[,...]: select records based using keys and values
 
     * --validate: perform data validation checks
 
-    * --year=YEAR: output data for YEAR only
+    * --units=glm: change units to GridLAB-D format
 
-    * --month=MONTH: output data for MONTH only
+Description:
 
-    * --state=STATE: output data for STATE only
+The `retail` utility downloads EIA retail electricity price, sales, revenue, and
+customer count data. The data is collated and indexed by default by year,
+month, and state. Data is presented by default in multi-level columns for each
+data field by sector, e.g., residential, commercial, industrial, transportation
+and total.
 
-    * --sector=SECTOR: output data for SECTOR only
+The indexing can be changed using the `--index=` option.  For example, you can
+specify indexing by state, year, and month by using the option
+`--index=State,Year,Month`.
 
-    * --keys[=INDEX]: output keys for INDEX (default all keys)
+Data can be grouped by any the index keys available, e.g., year, month, and/or
+sector, using the `--group=...` option. The group keys override the `--index`
+options.
+
+To get a list of available key values, use the `--keys=...` option. For example,
+`--keys=Year` will return a list of available years.  If multiple keys are
+specified, the list of keys is prefixed with the key name, followed by an equal
+sign, and each key list is output on a separate line. 
+
+By default all output is generated to `stdout` in Pandas display format. The
+output format can be changed using the `--output=...` option. The filename is
+used to determine the `Pandas.DataFrame.to_*`. If the extension is not valid,
+you can used the `--format=...` option to specify which output function to use.
+For example, `--output=file.xlsx` does not have a corresponding Pandas
+DataFrame output function named `to_xlsx`. But `to_excel()` handles that
+format, so specifying `--format=excel` should be specified as well.
+
+Options for `bool`, `int`, `str`, and `float` parameters of the output functions
+are allowed, using comma separated tuples of the format `option:value`. For
+example, `--output=file.xlsx,float_format:%g` would result in the output call
+
+    pd.DataFrame.to_excel('file.xlsx',float_format='%g')
+
+Multi headers and indexes may be packed using the `--header=pack` and
+`--index=pack` options.  Other valid header and index options are `unpack` and
+`none`, which results in multi-index output or no output, respectively, of
+headers and indexes.
+
+Using `--units=glm` automatically causes headers to be packed and drops the
+units columns.  The index is also packed, so you must use `--index=unpack` to
+cause the index to be split into multiple columns.
 
 See also:
 
@@ -28,6 +82,7 @@ import sys
 from typing import TypeVar as _TYPEVAR
 import datetime as dt
 import pandas as pd
+import openpyxl
 
 E_OK = 0
 E_ERROR =1
@@ -51,6 +106,21 @@ def main(argv:list[str]=sys.argv[1:]) -> int:
         FileNotFoundError: exception raised when an input file is not found.
         RetailError: exception raised when an invalid command argument is encountered.
     """
+
+    main.DATA = RetailElectricity()
+    main.DEBUG = False
+    main.YEAR = None
+    main.MONTH = None
+    main.STATE = None
+    main.SECTOR = None
+    main.VALUE = None
+    main.FORMAT = None
+    main.INDEX = False
+    main.HEADER = 'pack'
+    main.PRECISION = 2
+    main.OUTPUT = None
+    main.UNITS = None
+    main.OPTIONS = {"args":[],"kwargs":{}}
 
     try:
 
@@ -116,7 +186,7 @@ class RetailElectricity:
     """
     URL = "https://www.eia.gov/electricity/data/eia861m/xls/sales_revenue.xlsx"
     REFRESH = 86400 # refresh every day
-    DATA = None
+    CACHE = None
 
     def __init__(self:_TYPEVAR("RetailElectricity"),url:str=None):
         """Class constructor 
@@ -124,33 +194,33 @@ class RetailElectricity:
         Arguments:
 
             url (str): URL from which data is downloaded (default is `RetailElectricity.URL`)
-
         """
         if url:
             self.URL = url
 
         cache = os.path.basename(self.URL)
         expires = dt.datetime.now() - dt.timedelta(seconds=self.REFRESH)
-        if self.DATA is None \
+        if self.CACHE is None \
                 or dt.datetime.fromtimestamp(os.path.getctime(cache)) < expires:
             if not os.path.exists(cache):
                 file = self.URL
             else:
                 file = cache
-            self.DATA = pd.read_excel(file,
+            self.CACHE = pd.read_excel(file,
                 header=[0,1,2],
                 index_col=[0,1,2],
                 skipfooter=1 if file == self.URL else 0,
                 ).sort_index()
             if file != cache:
                 try:
-                    self.DATA.to_excel(cache)
+                    self.CACHE.to_excel(cache)
                 except:
                     os.remove(cache)
                     raise
-            self.DATA.index.names = ["Year","Month","State"]
-            self.DATA.columns.names = ["Sector","Value","Unit"]
-            self.DATA.drop([x for x in self.DATA.columns if 'Data Status' in x],axis=1,inplace=True)
+            self.CACHE.index.names = ["Year","Month","State"]
+            self.CACHE.columns.names = ["Sector","Value","Unit"]
+            self.CACHE.drop([x for x in self.CACHE.columns if 'Data Status' in x],axis=1,inplace=True)
+        self.DATA = self.CACHE.copy()
             
     def __getitem__(self:_TYPEVAR("RetailElectricity"),index):
         if isinstance(index,int) or len(index) <= 3:
@@ -208,6 +278,8 @@ def _validate():
 
     data = RetailElectricity()
 
+    main.DEBUG = True
+
     assert min(data.keys(KEY_YEAR,True))==2010
     assert data.keys(KEY_MONTH,True)==set(range(1,13))
     assert data.keys(KEY_STATE,True)=={
@@ -230,35 +302,38 @@ def _validate():
     assert len(data[2020])==612
     assert len(data[(2020)])==612
     assert len(data[(2020,7)])==51
-    assert len(data[(2020,7,"CA")].index)==21
+    assert len(data[(2020,7,"CA")])==20
     assert len(data[(2020,7,"CA","RESIDENTIAL")])==4
     assert len(data[(2020,7,"CA","RESIDENTIAL","Revenue")])==1
 
-def _main(argv:list[str]) -> int:
+    try:
+        for test in """--debug --stdout=keys.txt,w --keys
+    --stdout=keys.txt,a --keys=State
+    --stdout=keys.txt,mode:a --keys=Year,Sector
+    --output=test.xlsx,sheet_name:test --format=excel --units=glm --index=unpack --header=unpack
+    --output=test.json,indent:4
+    --units=glm --index=unpack --output=test.csv,float_format:%.1f,index:true,chunksize:1000 --precision=-2
+    """.split("\n"):
+            main(test.split())
+    except:
+        for file in ["keys.txt","test.csv","test.xlsx","test.json","sales_revenue.xlsx"]:
+            if os.path.exists(file):
+                os.remove(file)
+        raise
 
-    main.DEBUG = False
-    main.YEAR = None
-    main.MONTH = None
-    main.STATE = None
-    main.SECTOR = None
-    main.VALUE = None
-    main.FORMAT = "csv"
-    main.INDEX = False
-    main.HEADER = 'pack'
-    main.PRECISION = 2
+def _main(argv:list[str]) -> int:
 
     if len(argv) == 0:
 
-        print([x for x in __doc__.split("\n") if x.startswith("Syntax: ")][0])
+        print([x for x in __doc__.split("\n") if x.startswith("Syntax: ")][0],file=sys.stderr)
         return E_OK
 
     if argv[0] in ["-h","--help","help"]:
 
-        print(__doc__)
+        print(__doc__,file=main.OUTPUT if main.OUTPUT else sys.stdout)
         return E_ERROR
 
-    retail = RetailElectricity()
-    data = retail.DATA.reset_index()
+    data = main.DATA.DATA
 
     for arg in argv:
         key,value = arg.split("=",1) if "=" in arg else (arg,None)
@@ -274,14 +349,28 @@ def _main(argv:list[str]) -> int:
         
         elif key == "--select":
 
-            select = {x:y for x,y in [z.split(':',1) for z in value.split(",")]}
+            astype = {
+                "Year" : int,
+                "Month" : int,
+                "State" : str,
+            }
+            select = {x:astype[x](y) for x,y in [z.split(':',1) for z in value.split(",")]}
+            data.reset_index(inplace=True)
             data.set_index(list(select.keys()),inplace=True)
             data.sort_index(inplace=True)
-            data = data.loc[tuple(select.values())]
+            result = data.loc[tuple(select.values())]
+            if isinstance(result,pd.Series):
+                data = data.loc[[list(select.values())]]
+            else:
+                data = result
 
         elif key == "--index":
 
             main.INDEX = True if not value else value
+            if value.lower() == "none":
+                main.INDEX = False
+            elif value.lower() == "unpack":
+                main.INDEX = True
 
         elif key == "--group":
 
@@ -299,17 +388,41 @@ def _main(argv:list[str]) -> int:
                 main.HEADER = False
             main.HEADER=True if not value else value
 
+        elif key == "--stdout":
+
+            args = []
+            kwargs = {}
+            for arg in [x.split(":",2) for x in value.split(",")]:
+                if len(arg) == 2:
+                    kwargs[arg[0]] = arg[1]
+                else:
+                    args.append(arg[0])
+            sys.stdout = open(*args,**kwargs)
+
+        elif key == "--stderr":
+
+            args = []
+            kwargs = {}
+            for arg in [x.split(":",2) for x in value.split(",")]:
+                if len(arg) == 2:
+                    kwargs[arg[0]] = arg[1]
+                else:
+                    args.append(arg[0])
+            sys.stderr = open(*args,**kwargs)
+
         elif key == "--keys":
 
             valid = [globals()[x] for x in globals() if x.startswith("KEY_")]
             for k in ( value.split(",") if value else valid ):
                 if k in valid:
-                    vals = ",".join(sorted([str(x) for x in retail.keys(k,unique=True)]))
-                    print(f"{k}={vals}" if value is None or "," in value else vals)
+                    vals = ",".join(sorted([str(x) for x in main.DATA.keys(k,unique=True)]))
+                    print(f"{k}={vals}" if value is None or "," in value else vals,
+                        file=main.OUTPUT if main.OUTPUT else sys.stdout,
+                        **main.OPTIONS["kwargs"])
                 else:
                     raise RetailError(f"key {k} not found in indexes")
 
-            return E_OK
+            sys.exit(E_OK)
 
         elif key == "--format":
 
@@ -322,7 +435,39 @@ def _main(argv:list[str]) -> int:
 
         elif key == "--precision":
 
-            main.PRECISION = int(value)
+            main.PRECISION = None if value is None else int(value)
+
+        elif key == "--units":
+
+            if value == "glm":
+
+                lookup = {
+                    'Revenue': '$k', 
+                    'Sales': 'MWh', 
+                    'Customers': 'unit', 
+                    'Price': '0.01$/kWh',
+                }
+                columns = list(data.columns)
+                for n,values in enumerate(columns):
+                    values = list(values)
+                    if values[1] in lookup:
+                        values[2] = lookup[values[1]]
+                    columns[n] = tuple(values)
+                data.columns = pd.MultiIndex.from_tuples(columns)
+                for column,unit in lookup.items():
+                    data[column] = unit
+                main.INDEX = "pack"
+                main.UNITS = "glm"
+
+        elif key in ["-o","--output"]:
+
+            for arg in [x.split(":",2) for x in value.split(",")]:
+                if len(arg) == 2:
+                    main.OPTIONS["kwargs"][arg[0]] = arg[1]
+                else:
+                    main.OPTIONS["args"].append(arg[0])
+            main.OUTPUT = main.OPTIONS["args"][0]
+            main.FORMAT = os.path.splitext(main.OUTPUT)[1].split(".")[-1]
 
         elif arg != "-":
         
@@ -331,17 +476,60 @@ def _main(argv:list[str]) -> int:
     if main.HEADER == "pack":
         pack = [":".join([y for y in x if y]) for x in data.columns]
         data.columns.droplevel([1,2])
+        drop = []
+        if main.UNITS == "glm":
+            for n,item in enumerate(pack):
+                item = item.split(":",3)
+                if len(item) == 3:
+                    item = f"{item[0]}_{item[1]}[{item[2]}]"
+                    pack[n] = item
+                else:
+                    drop.append(":".join(item))
         data.columns = pack
+        for item in drop:
+            data.drop(item,axis=1,inplace=True)
 
     if main.INDEX == "pack":
         name = ":".join(data.index.names)
         data[name] = [":".join([str(y) for y in x if x]) for x in data.index]
         data.set_index(name,inplace=True)
+    elif not main.INDEX:
+        data.reset_index(inplace=True)
 
-    print(data.round(main.PRECISION).to_csv(
-        header=True if main.HEADER else False,
-        index=True if main.INDEX else False,
-        ))
+    if not main.PRECISION is None:
+        data = data.round(main.PRECISION)
+
+    if main.FORMAT in [x[3:] for x in dir(data) if x.startswith("to_")]:
+
+        call = getattr(data,f"to_{main.FORMAT}")
+        def bool_t(x):
+            if x in ["true","1"]:
+                return True
+            elif x in ["false","0"]:
+                return False
+            else:
+                raise ValueError(f"{x} is a not boolean")
+
+        for name,spec in call.__annotations__.items(): # cast to expected type
+            if name in list(main.OPTIONS["kwargs"]):
+                for method in [x for x in spec.split("|") if x.strip() in ["int","float","bool_t"]]:
+                    try:
+                        main.OPTIONS["kwargs"][name] = eval(method.strip())(main.OPTIONS["kwargs"][name])
+                        break
+                    except:
+                        continue
+        call(*main.OPTIONS["args"],**main.OPTIONS["kwargs"])
+
+    elif main.FORMAT is None:
+
+        pd.options.display.width = None
+        pd.options.display.max_rows = None
+        pd.options.display.max_columns = None
+        print(data,file=main.OUTPUT if main.OUTPUT else sys.stdout)
+
+    else:
+
+        raise RetailError(f"{main.FORMAT} is an invalid output format")
 
     return E_OK
 

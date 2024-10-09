@@ -32,15 +32,55 @@ Retail electricity data
 <p/>Syntax: <code>retail [OPTIONS ...]</code><p/>
 <h2 class="w3-container">Options</h2>
 <p/><ul><li>
-<code>--debug</code>:  enable traceback output of errors</li><li>
-<code>--validate</code>:  perform data validation checks</li><li>
-<code>--year=YEAR</code>:  output data for YEAR only</li><li>
-<code>--month=MONTH</code>:  output data for MONTH only</li><li>
-<code>--state=STATE</code>:  output data for STATE only</li><li>
-<code>--sector=SECTOR</code>:  output data for SECTOR only</li><li>
-<code>--keys[=INDEX]</code>:  output keys for INDEX (default all keys)</li></li>
+<code>-</code>: run with no options</li><li>
+<code>--debug</code>: enable traceback output of errors</li><li>
+<code>--format={csv}</code>: override output format (see <code>pandas.DataFrame.to_*</code>)</li><li>
+<code>--group=[KEY:FUNCTION[,...]]</code>: apply aggregate function by group key</li><li>
+<code>--header=[pack|unpack|none]</code>: change header output (default 'pack')</li><li>
+<code>--index[=pack|unpack|none]</code>: change index output (default 'pack')</li><li>
+<code>--keys[=KEY[,...]]</code>: change index from default <code>Year,Month,State</code></li><li>
+<code>--output=FILE[,OPTION,...]</code>: output to file (default <code>stdout</code>)</li><li>
+<code>--precision=INT</code>: change rounding</li><li>
+<code>--select=KEY:VALUE[,...]</code>: select records based using keys and values</li><li>
+<code>--validate</code>: perform data validation checks</li><li>
+<code>--units=glm</code>: change units to GridLAB-D format</li></li>
 </ul>
 
+<h2 class="w3-container">Description</h2>
+<p/>The <code>retail</code> utility downloads EIA retail electricity price, sales, revenue, and
+customer count data. The data is collated and indexed by default by year,
+month, and state. Data is presented by default in multi-level columns for each
+data field by sector, e.g., residential, commercial, industrial, transportation
+and total.
+<p/>The indexing can be changed using the <code>--index=</code> option.  For example, you can
+specify indexing by state, year, and month by using the option
+<code>--index=State,Year,Month</code>.
+<p/>Data can be grouped by any the index keys available, e.g., year, month, and/or
+sector, using the <code>--group=...</code> option. The group keys override the <code>--index</code>
+options.
+<p/>To get a list of available key values, use the <code>--keys=...</code> option. For example,
+<code>--keys=Year</code> will return a list of available years.  If multiple keys are
+specified, the list of keys is prefixed with the key name, followed by an equal
+sign, and each key list is output on a separate line. 
+<p/>By default all output is generated to <code>stdout</code> in Pandas display format. The
+output format can be changed using the <code>--output=...</code> option. The filename is
+used to determine the <code>Pandas.DataFrame.to_*</code>. If the extension is not valid,
+you can used the <code>--format=...</code> option to specify which output function to use.
+For example, <code>--output=file.xlsx</code> does not have a corresponding Pandas
+DataFrame output function named <code>to_xlsx</code>. But <code>to_excel()</code> handles that
+format, so specifying <code>--format=excel</code> should be specified as well.
+<p/>Options for <code>bool</code>, <code>int</code>, <code>str</code>, and <code>float</code> parameters of the output functions
+are allowed, using comma separated tuples of the format <code>option:value</code>. For
+example, <code>--output=file.xlsx,float_format:%g</code> would result in the output call
+<p/><pre>pd.DataFrame.to_excel('file.xlsx',float_format='%g')
+</pre><p/>Multi headers and indexes may be packed using the <code>--header=pack</code> and
+<code>--index=pack</code> options.  Other valid header and index options are <code>unpack</code> and
+<code>none</code>, which results in multi-index output or no output, respectively, of
+headers and indexes.
+<p/>Using <code>--units=glm</code> automatically causes headers to be packed and drops the
+units columns.  The index is also packed, so you must use <code>--index=unpack</code> to
+cause the index to be split into multiple columns.
+<p/>
 <h2 class="w3-container">See also</h2>
 <p/>* EIA Electricity Data (<a href="https://www.eia.gov/electricity/data.php" target="_tab">https://www.eia.gov/electricity/data.php</a>)
 <p/>
@@ -50,28 +90,38 @@ Retail electricity data
 <p/><p/>    This class is used to select retail electricity supply data. 
 <p/><h3 class="w3-container">Examples</h3>
 <p/><p/>    Create an accessor object
-<p/><pre>from retail import RetailElectricitydata = RetailElectricity()<p/></pre><p/>    To read the data for 2020, use
-<p/><pre>data[2020]<p/></pre><p/>    To read the data for August 2020, use
-<p/><pre>data[(2020,7)]<p/></pre><p/>    To read the data for August 2020 for California, use
-<p/><pre>data[(2020,7,"CA")]<p/></pre><p/>    To read the residential data for August 2020 for California, use
-<p/><pre>data[(2020,7,"CA","RESIDENTIAL")]<p/></pre><p/>    To read the residential price data for August 2020 for California, use
-<p/><pre>data[(2020,7,"CA","RESIDENTIAL","Price")]<p/></pre><p/>    To get the units of <code>Price</code>, use
-<p/><pre>data.units()["Price"]<p/></pre><p/>    To get a list of available sectors, use
-<p/><pre>data.keys(KEY<sub>SECTOR)</sub><p/></pre><p/>    To get a list of available values, use
-<p/><pre>data.key(KEY<sub>VALUE)</sub></pre><p/>    
+<p/><pre>from retail import RetailElectricity
+data = RetailElectricity()
+<p/></pre><p/>    To read the data for 2020, use
+<p/><pre>data[2020]
+<p/></pre><p/>    To read the data for August 2020, use
+<p/><pre>data[(2020,7)]
+<p/></pre><p/>    To read the data for August 2020 for California, use
+<p/><pre>data[(2020,7,"CA")]
+<p/></pre><p/>    To read the residential data for August 2020 for California, use
+<p/><pre>data[(2020,7,"CA","RESIDENTIAL")]
+<p/></pre><p/>    To read the residential price data for August 2020 for California, use
+<p/><pre>data[(2020,7,"CA","RESIDENTIAL","Price")]
+<p/></pre><p/>    To get the units of <code>Price</code>, use
+<p/><pre>data.units()["Price"]
+<p/></pre><p/>    To get a list of available sectors, use
+<p/><pre>data.keys(KEY_SECTOR)
+<p/></pre><p/>    To get a list of available values, use
+<p/><pre>data.key(KEY_VALUE)
+</pre><p/>    
 
 <h3 class="w3-container"><code><b>RetailElectricity</b>(<b>url</b>:<i>str</i>)</code></h3>
 <p/>Class constructor 
-<p/><h3 class="w3-container">Arguments</h3>
-<p/><ul><li><code>url (str)</code>:  URL from which data is downloaded (default is <code>RetailElectricity.URL</code>)</li>
+<p/><h4 class="w3-container">Arguments</h4>
+<p/><ul><li><code>url (str)</code>: URL from which data is downloaded (default is <code>RetailElectricity.URL</code>)</li>
 </li>
 </ul>
         
 
-<h3 class="w3-container"><code><b>RetailElectricity.keys</b>(<b>level</b>:<i>int</i>, <b>unique</b>:<i>bool</i>) &rightarrow; <i>set | list</i></code></h3>
+<h3 class="w3-container"><code><b>RetailElectricity.keys</b>(<b>key</b>:<i>str</i>, <b>unique</b>:<i>bool</i>) &rightarrow; <i>set | list</i></code></h3>
 <p/>Get keys used for indexing data
 <p/><h4 class="w3-container">Arguments</h4>
-<p/><ul><li><code>level (int)</code>:  the key level for which the keys are sought (default None)</li>
+<p/><ul><li><code>key (str)</code>:  the key level for which the keys are sought (default None)</li>
 <li><code>unique (bool)</code>:  specifies whether to return the distinct values</li>
 </li>
 </ul>
@@ -93,25 +143,25 @@ Retail electricity data
 <p/>Main CLI
 <p/>    Runs the main <code>retail</code> program. 
 <p/><h3 class="w3-container">Arguments</h3>
-<ul><li><code>argv (list[str])</code>:  argument list (default is sys.argv)</li>
+<ul><li><code>argv (list[str])</code>: argument list (default is sys.argv)</li>
 </li>
 </ul>
 <h3 class="w3-container">Returns</h3>
-<ul><li><code>int</code>:  exit code</li>
+<ul><li><code>int</code>: exit code</li>
 </li>
 </ul>
 <h3 class="w3-container">Properties</h3>
-<ul><li><code>DEBUG (bool)</code>:  enable debugging traceback on exception</li>
+<ul><li><code>DEBUG (bool)</code>: enable debugging traceback on exception</li>
 </li>
 </ul>
 <h3 class="w3-container">Exceptions</h3>
-<ul><li><code>Exception</code>:  exceptions are only raised if <code>DEBUG</code> is <code>True</code>.</li>
-<li><code>FileNotFoundError</code>:  exception raised when an input file is not found.</li>
-<li><code>RetailError</code>:  exception raised when an invalid command argument is encountered.</li>
+<ul><li><code>Exception</code>: exceptions are only raised if <code>DEBUG</code> is <code>True</code>.</li>
+<li><code>FileNotFoundError</code>: exception raised when an input file is not found.</li>
+<li><code>RetailError</code>: exception raised when an invalid command argument is encountered.</li>
 </li>
 </ul>
     
-<h2 class="w3-container">Python Constants</h2><p/><code>E_ERROR = 1</code><p/><code>E_OK = 0</code><p/><code>KEY_MONTH = 1</code><p/><code>KEY_SECTOR = 3</code><p/><code>KEY_STATE = 2</code><p/><code>KEY_VALUE = 4</code><p/><code>KEY_YEAR = 0</code>
+<h2 class="w3-container">Python Constants</h2><p/><code>E_ERROR = 1</code><p/><code>E_OK = 0</code><p/><code>KEY_MONTH = 'Month'</code><p/><code>KEY_SECTOR = 'Sector'</code><p/><code>KEY_STATE = 'State'</code><p/><code>KEY_VALUE = 'Value'</code><p/><code>KEY_YEAR = 'Year'</code>
 <h1 id="package" class="w3-container">Package Metadata</h1>
 <p/><table class="w3-container">
 <tr><th><nobr>Name</nobr></th><td>:</td><td>retail</td></tr>
