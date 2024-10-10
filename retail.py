@@ -82,7 +82,6 @@ import sys
 from typing import TypeVar as _TYPEVAR
 import datetime as dt
 import pandas as pd
-import openpyxl
 
 E_OK = 0
 E_ERROR =1
@@ -121,11 +120,13 @@ def main(argv:list[str]=sys.argv[1:]) -> int:
     main.OUTPUT = None
     main.UNITS = None
     main.OPTIONS = {"args":[],"kwargs":{}}
+    main.ENCODING = "utf-8"
 
     try:
 
         rc = _main(argv)
 
+    # pylint: disable-next=W0718
     except Exception:
 
         e_type,e_value,_ = sys.exc_info()
@@ -184,51 +185,52 @@ class RetailElectricity:
 
       data.key(KEY_VALUE)    
     """
-    URL = "https://www.eia.gov/electricity/data/eia861m/xls/sales_revenue.xlsx"
-    REFRESH = 86400 # refresh every day
-    CACHE = None
+    url = "https://www.eia.gov/electricity/data/eia861m/xls/sales_revenue.xlsx"
+    refresh = 86400 # refresh every day
+    cache = None
 
     def __init__(self:_TYPEVAR("RetailElectricity"),url:str=None):
         """Class constructor 
 
         Arguments:
 
-            url (str): URL from which data is downloaded (default is `RetailElectricity.URL`)
+            url (str): URL from which data is downloaded (default is `RetailElectricity.url`)
         """
         if url:
-            self.URL = url
+            self.url = url
 
-        cache = os.path.basename(self.URL)
-        expires = dt.datetime.now() - dt.timedelta(seconds=self.REFRESH)
-        if self.CACHE is None \
+        cache = os.path.basename(self.url)
+        expires = dt.datetime.now() - dt.timedelta(seconds=self.refresh)
+        if self.cache is None \
                 or dt.datetime.fromtimestamp(os.path.getctime(cache)) < expires:
             if not os.path.exists(cache):
-                file = self.URL
+                file = self.url
             else:
                 file = cache
-            self.CACHE = pd.read_excel(file,
+            self.cache = pd.read_excel(file,
                 header=[0,1,2],
                 index_col=[0,1,2],
-                skipfooter=1 if file == self.URL else 0,
+                skipfooter=1 if file == self.url else 0,
                 ).sort_index()
             if file != cache:
                 try:
-                    self.CACHE.to_excel(cache)
+                    self.cache.to_excel(cache)
                 except:
                     os.remove(cache)
                     raise
-            self.CACHE.index.names = ["Year","Month","State"]
-            self.CACHE.columns.names = ["Sector","Value","Unit"]
-            self.CACHE.drop([x for x in self.CACHE.columns if 'Data Status' in x],axis=1,inplace=True)
-        self.DATA = self.CACHE.copy()
-            
+            self.cache.index.names = ["Year","Month","State"]
+            self.cache.columns.names = ["Sector","Value","Unit"]
+            self.cache.drop([x for x in self.cache.columns
+                if 'Data Status' in x],axis=1,inplace=True)
+        self.data = self.cache.copy()
+
     def __getitem__(self:_TYPEVAR("RetailElectricity"),index):
         if isinstance(index,int) or len(index) <= 3:
-            return self.DATA.loc[index]
+            return self.data.loc[index]
         if len(index) == 4:
-            return self.DATA.loc[index[:3]][index[3]]
+            return self.data.loc[index[:3]][index[3]]
         if len(index) == 5:
-            return self.DATA.loc[index[:3]][index[3]][index[4]]
+            return self.data.loc[index[:3]][index[3]][index[4]]
         raise KeyError("too many indexers")
 
     def keys(self:_TYPEVAR("RetailElectricity"),key:str=None,unique:bool=False) -> set|list:
@@ -246,14 +248,14 @@ class RetailElectricity:
 
         """
         if key is None:
-            return {"rows":list(self.DATA.index),"columns":list(self.DATA.columns)}
-        if key in self.DATA.index.names:
-            values = self.DATA.reset_index()[key]
-        elif key in self.DATA.columns.names:
-            column = [n for n,x in enumerate(self.DATA.columns.names) if x==key]
+            return {"rows":list(self.data.index),"columns":list(self.data.columns)}
+        if key in self.data.index.names:
+            values = self.data.reset_index()[key]
+        elif key in self.data.columns.names:
+            column = [n for n,x in enumerate(self.data.columns.names) if x==key]
             if column == []:
                 raise RetailError(f"{key} is not valid")
-            values = [x[column[0]] for x in self.DATA.columns]
+            values = [x[column[0]] for x in self.data.columns]
         else:
             raise KeyError(f"invalid key = {key}")
         return set(values) if unique else list(values)
@@ -266,7 +268,7 @@ class RetailElectricity:
             dict: mapping of value keys to units of values
 
         """
-        return {x[1]:x[2] for x in self.DATA.columns[1:]}
+        return {x[1]:x[2] for x in self.data.columns[1:]}
 
 KEY_YEAR = "Year"
 KEY_MONTH = "Month"
@@ -321,6 +323,7 @@ def _validate():
                 os.remove(file)
         raise
 
+# pylint: disable-next=R0914,R0912,R0915
 def _main(argv:list[str]) -> int:
 
     if len(argv) == 0:
@@ -333,20 +336,20 @@ def _main(argv:list[str]) -> int:
         print(__doc__,file=main.OUTPUT if main.OUTPUT else sys.stdout)
         return E_ERROR
 
-    data = main.DATA.DATA
+    data = main.DATA.data
 
     for arg in argv:
         key,value = arg.split("=",1) if "=" in arg else (arg,None)
-        
+
         if arg == "--debug":
-        
+
             main.DEBUG = True
-        
+
         elif arg == "--validate":
-        
+
             _validate()
             return E_OK
-        
+
         elif key == "--select":
 
             astype = {
@@ -397,6 +400,9 @@ def _main(argv:list[str]) -> int:
                     kwargs[arg[0]] = arg[1]
                 else:
                     args.append(arg[0])
+            if "encoding" not in kwargs:
+                kwargs["encoding"] = main.ENCODING
+            # pylint: disable-next=W1514,R1732
             sys.stdout = open(*args,**kwargs)
 
         elif key == "--stderr":
@@ -408,6 +414,9 @@ def _main(argv:list[str]) -> int:
                     kwargs[arg[0]] = arg[1]
                 else:
                     args.append(arg[0])
+            if "encoding" not in kwargs:
+                kwargs["encoding"] = main.ENCODING
+            # pylint: disable-next=W1514,R1732
             sys.stderr = open(*args,**kwargs)
 
         elif key == "--keys":
@@ -442,11 +451,11 @@ def _main(argv:list[str]) -> int:
             if len(data.index.names) < 3:
 
                 raise RetailError("--units must be specified first")
-               
+
             if main.UNITS:
 
-                raise RetailError("--units have already been specified") 
-                
+                raise RetailError("--units have already been specified")
+
             if value == "glm":
 
                 lookup = {
@@ -478,7 +487,7 @@ def _main(argv:list[str]) -> int:
             main.FORMAT = os.path.splitext(main.OUTPUT)[1].split(".")[-1]
 
         elif arg != "-":
-        
+
             raise RetailError(f"invalid option '{arg}'")
 
     if main.HEADER == "pack":
@@ -513,17 +522,20 @@ def _main(argv:list[str]) -> int:
         def bool_t(x):
             if x in ["true","1"]:
                 return True
-            elif x in ["false","0"]:
+            if x in ["false","0"]:
                 return False
-            else:
-                raise ValueError(f"{x} is a not boolean")
+            raise ValueError(f"{x} is a not boolean")
 
         for name,spec in call.__annotations__.items(): # cast to expected type
             if name in list(main.OPTIONS["kwargs"]):
-                for method in [x for x in spec.split("|") if x.strip() in ["int","float","bool_t"]]:
+                for method in [x for x in spec.split("|") if x.strip() in \
+                        ["int","float",bool_t.__name__]]:
                     try:
-                        main.OPTIONS["kwargs"][name] = eval(method.strip())(main.OPTIONS["kwargs"][name])
+                        # pylint: disable-next=W0123
+                        main.OPTIONS["kwargs"][name] = eval(method.strip())\
+                            (main.OPTIONS["kwargs"][name])
                         break
+                    # pylint: disable-next=W0702
                     except:
                         continue
         call(*main.OPTIONS["args"],**main.OPTIONS["kwargs"])

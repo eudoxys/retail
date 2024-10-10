@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools","qdox @ git+https://github.com/eudoxys/qdox"]
+requires = ["setuptools","qdox @ git+https://github.com/eudoxys/qdox","pylint"]
 build-backend = "setuptools.build_meta"
 install = "qdox -"
 
