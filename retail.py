@@ -136,6 +136,16 @@ def main(argv:list[str]=sys.argv[1:]) -> int:
             raise
         rc = E_ERROR
 
+    finally:
+
+        if sys.stdout != sys.__stdout__:
+            close(sys.stdout)
+            sys.stdout = sys.__stdout__
+
+        if sys.stderr != sys.__stderr__:
+            close(sys.stderr)
+            sys.stderr = sys.__stderr__
+
     return rc
 
 class RetailError(Exception):
