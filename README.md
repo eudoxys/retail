@@ -1,3 +1,5 @@
+[![Validate main](https://github.com/eudoxys/retail/actions/workflows/validate-main.yml/badge.svg)](https://github.com/eudoxys/retail/actions/workflows/validate-main.yml)
+
 # US Retail Electricity Data
 
 US retail electricity data collected from EIA.
