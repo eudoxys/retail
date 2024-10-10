@@ -27,7 +27,7 @@ jobs:
       run: |
         python3 -m venv .venv
         source .venv/bin/activate
-        python3 -m pip install pip --upgrade pylint
+        python3 -m pip install pip --upgrade pylint -r requirements.txt
         pylint retail.py
 
     - name: Validate
@@ -54,7 +54,7 @@ jobs:
       run: |
         python3 -m venv .venv
         source .venv/bin/activate
-        python3 -m pip install pip --upgrade pylint
+        python3 -m pip install pip --upgrade pylint -r requirements.txt
         pylint retail.py
 
     - name: Validate
@@ -81,7 +81,7 @@ jobs:
       run: |
         python3 -m venv .venv
         . .venv/scripts/activate
-        python3 -m pip install pip --upgrade pylint
+        python3 -m pip install pip --upgrade pylint -r requirements.txt
         pylint retail.py
 
     - name: Validate
